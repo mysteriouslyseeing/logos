@@ -19,7 +19,7 @@ mod type_params;
 pub use self::definition::{Definition, Literal};
 pub use self::ignore_flags::IgnoreFlags;
 use self::nested::{AttributeParser, Nested, NestedValue};
-use self::skip::Skip;
+pub use self::skip::{Skip, SkipCallback};
 pub use self::subpattern::Subpatterns;
 use self::type_params::{replace_lifetime, traverse_type, TypeParams};
 
@@ -31,6 +31,7 @@ pub struct Parser {
     pub skips: Vec<Skip>,
     pub extras: MaybeVoid,
     pub error_type: MaybeVoid,
+    pub error_callback: Option<TokenStream>,
     pub subpatterns: Subpatterns,
     pub logos_path: Option<TokenStream>,
     types: TypeParams,
@@ -118,6 +119,17 @@ impl Parser {
                     }
                     _ => {
                         parser.err("Expected: #[logos(error = SomeType)]", span);
+                    }
+                }),
+                ("error_callback", |parser, span, value| match value {
+                    NestedValue::Assign(value) => {
+                        if let Some(previous) = parser.error_callback.replace(value) {
+                            parser.err("Error callback can be defined only once", span)
+                                .err("Previous definition here", previous.span());
+                        }
+                    }
+                    _ => {
+                        parser.err("Expected: #[logos(error_callback = callback)]", span);
                     }
                 }),
                 ("extras", |parser, span, value| match value {
@@ -226,7 +238,7 @@ impl Parser {
                     self.err("Unexpected token in attribute", tokens.span());
                 }
                 Nested::Unnamed(tokens) => match position {
-                    0 => skip.callback = Some(tokens),
+                    0 => skip.callback = Some(SkipCallback::hoist_from_callback(self.parse_callback(tokens)?)),
                     _ => {
                         self.err(
                             "\

@@ -76,6 +76,15 @@ pub trait Logos<'source>: Sized {
     ) -> Lexer<'source, Self> {
         Lexer::with_extras(source, extras)
     }
+
+    /// Holds the error callback passed in via `#[logos(error_callback = ...)]`.
+    const ERROR_CALLBACK: Option<fn(&mut Lexer<'source, Self>) -> Self::Error> = None;
+
+    /// Make an error, either using `Error::default()`, or by calling the callback provided in
+    /// `#[logos(error_callback = ...)]`
+    fn make_error(lexer: &mut Lexer<'source, Self>) -> Self::Error {
+        Self::ERROR_CALLBACK.map(|f| f(lexer)).unwrap_or_else(|| Self::Error::default())
+    }
 }
 
 /// Type that can be returned from a callback, informing the `Lexer`, to skip

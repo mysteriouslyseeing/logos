@@ -30,7 +30,7 @@ enum Token {
     Numbers,
 }
 
-fn newline_callback(lexer: &mut Lexer<Token>) -> Skip {
+fn newline_callback(lexer: &mut Lexer<Token>) -> Result<Skip, ()> {
     lexer.extras.line_num += 1;
-    Skip
+    Ok(Skip)
 }

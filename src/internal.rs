@@ -72,7 +72,10 @@ impl<'s, T: Logos<'s>> CallbackResult<'s, (), T> for bool {
     {
         match self {
             true => lex.set(Ok(c(()))),
-            false => lex.set(Err(T::Error::default())),
+            false => {
+                let e = T::make_error(lex);
+                lex.set(Err(e))
+            },
         }
     }
 }
@@ -85,7 +88,10 @@ impl<'s, P, T: Logos<'s>> CallbackResult<'s, P, T> for Option<P> {
     {
         match self {
             Some(product) => lex.set(Ok(c(product))),
-            None => lex.set(Err(T::Error::default())),
+            None => {
+                let e = T::make_error(lex);
+                lex.set(Err(e))
+            },
         }
     }
 }
@@ -222,6 +228,52 @@ impl<'s, T: Logos<'s>> CallbackResult<'s, (), T> for FilterResult<T, T::Error> {
                 T::lex(lex);
             }
             FilterResult::Error(err) => lex.set(Err(err)),
+        }
+    }
+}
+
+pub trait SkipCallbackResult<'s, T: Logos<'s>> {
+    fn evaluate(self, lex: &mut Lexer<'s, T>);
+}
+
+impl<'s, T: Logos<'s>> SkipCallbackResult<'s, T> for () {
+    fn evaluate(self, lex: &mut Lexer<'s, T>) {
+        lex.trivia();
+        T::lex(lex)
+    }
+}
+
+impl<'s, T: Logos<'s>> SkipCallbackResult<'s, T> for Skip {
+    fn evaluate(self, lex: &mut Lexer<'s, T>) {
+        lex.trivia();
+        T::lex(lex)
+    }
+}
+
+impl<'s, T: Logos<'s>, E: Into<T::Error>> SkipCallbackResult<'s, T> for Result<(), E> {
+    fn evaluate(self, lex: &mut Lexer<'s, T>) {
+        match self {
+            Err(e) => {
+                lex.set(Err(e.into()))
+            }
+            Ok(()) => {
+                lex.trivia();
+                T::lex(lex)
+            }
+        }
+    }
+}
+
+impl<'s, T: Logos<'s>, E: Into<T::Error>> SkipCallbackResult<'s, T> for Result<Skip, E> {
+    fn evaluate(self, lex: &mut Lexer<'s, T>) {
+        match self {
+            Err(e) => {
+                lex.set(Err(e.into()))
+            }
+            Ok(Skip) => {
+                lex.trivia();
+                T::lex(lex)
+            }
         }
     }
 }

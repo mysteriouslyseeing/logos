@@ -1,14 +1,38 @@
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use syn::spanned::Spanned;
 
-use crate::leaf::Callback;
+use crate::leaf::{Callback, InlineCallback};
 use crate::parser::nested::NestedValue;
 use crate::parser::{Literal, Parser};
 
 pub struct Skip {
     pub literal: Literal,
-    pub callback: Option<TokenStream>,
+    pub callback: Option<SkipCallback>,
     pub priority: Option<usize>,
+}
+
+#[derive(Clone)]
+pub enum SkipCallback {
+    Label(TokenStream),
+    Inline(Box<InlineCallback>),
+    None(Span),
+}
+
+impl SkipCallback {
+    pub fn span(&self) -> Span {
+        match self {
+            SkipCallback::Label(tokens) => tokens.span(),
+            SkipCallback::Inline(inline) => inline.span,
+            SkipCallback::None(span) => *span,
+        }
+    }
+    pub fn hoist_from_callback(callback: Callback) -> Self {
+        match callback {
+            Callback::Label(label) => Self::Label(label),
+            Callback::Inline(inline) => Self::Inline(inline),
+            Callback::Skip(skip) => skip
+        }
+    }
 }
 
 impl Skip {
@@ -23,24 +47,30 @@ impl Skip {
     pub fn named_attr(&mut self, name: Ident, value: NestedValue, parser: &mut Parser) {
         match (name.to_string().as_str(), value) {
             ("priority", NestedValue::Assign(tokens)) => {
-            let prio = match tokens.to_string().parse() {
-                Ok(prio) => prio,
-                Err(_) => {
-                    parser.err("Expected an unsigned integer", tokens.span());
-                    return;
-                }
-            };
+                let prio = match tokens.to_string().parse() {
+                    Ok(prio) => prio,
+                    Err(_) => {
+                        parser.err("Expected an unsigned integer", tokens.span());
+                        return;
+                    }
+                };
 
-            if self.priority.replace(prio).is_some() {
-                parser.err("Resetting previously set priority", tokens.span());
-            }
+                if self.priority.replace(prio).is_some() {
+                    parser.err("Resetting previously set priority", tokens.span());
+                }
             }
             ("priority", _) => {
                 parser.err("Expected: priority = <integer>", name.span());
             }
             ("callback", NestedValue::Assign(tokens)) => {
                 let span = tokens.span();
-                let callback = tokens;
+                let callback = match parser.parse_callback(tokens) {
+                    Some(cb) => SkipCallback::hoist_from_callback(cb),
+                    None => {
+                        // parse_callback already echoed this error so we dont need to
+                        return;
+                    }
+                };
 
                 if let Some(previous) = self.callback.replace(callback) {
                     parser
@@ -72,8 +102,8 @@ impl Skip {
 
     pub fn into_callback(self) -> Callback {
         match self.callback {
-            Some(tokens) => Callback::Skip(Ok(tokens)),
-            None => Callback::Skip(Err(self.literal.span()))
+            Some(skip) => Callback::Skip(skip),
+            None => Callback::Skip(SkipCallback::None(self.literal.span())),
         }
     }
 }

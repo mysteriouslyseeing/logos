@@ -217,6 +217,13 @@ pub fn generate(input: TokenStream) -> TokenStream {
     debug!("Parsing additional options (extras, source, ...)");
 
     let error_type = parser.error_type.take();
+    // dummy variable because quote can only repeat if a matching variable implements iterator at the right depth
+    let not_error_callback = if parser.error_callback.is_some() {
+        None
+    } else {
+        Some(TokenStream::new())
+    }.into_iter();
+    let error_callback = parser.error_callback.take().into_iter();
     let extras = parser.extras.take();
     let source = parser
         .source
@@ -242,6 +249,12 @@ pub fn generate(input: TokenStream) -> TokenStream {
                 type Extras = #extras;
 
                 type Source = #source;
+
+                fn make_error(lex: &mut #logos_path::Lexer<'s, Self>) -> Self::Error {
+                    #((#error_callback)(lex))*
+
+                    #((#not_error_callback Default::default()))*
+                }
 
                 fn lex(lex: &mut #logos_path::Lexer<'s, Self>) {
                     #body
@@ -307,7 +320,7 @@ pub fn generate(input: TokenStream) -> TokenStream {
 
     let body = generator.generate();
     impl_logos(quote! {
-        use #logos_path::internal::{LexerInternal, CallbackResult};
+        use #logos_path::internal::{LexerInternal, CallbackResult, SkipCallbackResult};
 
         type Lexer<'s> = #logos_path::Lexer<'s, #this>;
 

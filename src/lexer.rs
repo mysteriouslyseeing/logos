@@ -376,13 +376,14 @@ where
     #[inline]
     fn error(&mut self) {
         self.token_end = self.source.find_boundary(self.token_end);
+        let e = Self::Token::make_error(self);
         #[cfg(not(feature = "forbid_unsafe"))]
         {
-            self.token = core::mem::ManuallyDrop::new(Some(Err(Token::Error::default())));
+            self.token = core::mem::ManuallyDrop::new(Some(Err(e)));
         }
         #[cfg(feature = "forbid_unsafe")]
         {
-            self.token = Some(Err(Token::Error::default()));
+            self.token = Some(Err(e));
         }
     }
 
