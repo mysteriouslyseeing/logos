@@ -1,14 +1,5 @@
 fn main() {
-    let mut lexer = Token::lexer("abc 123\nab( |23\nAbc 123");
-    let mut out_tokens = Vec::new();
-
-    while let Some(token_result) = lexer.next() {
-        if let Ok(token) = token_result {
-            out_tokens.push(token);
-        } else {
-            // Oh no! There was an error!
-        }
-    }
+    let _tokens: Vec<_> = Token::lexer("abc 123\nab( |23\nAbc 123").collect();
 }
 
 use logos::{Lexer, Logos, Skip};
