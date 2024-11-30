@@ -7,7 +7,6 @@ fn main() {
             out_tokens.push(token);
         } else {
             // Oh no! There was an error!
-            eprintln!("Unrecognised character on line {}", lexer.extras.line_num + 1);
         }
     }
 }
@@ -23,6 +22,9 @@ struct Extras {
 #[logos(skip r"[ \r]")]
 #[logos(skip(r"\n", callback = newline_callback, priority = 3))]
 #[logos(extras = Extras)]
+#[logos(error_callback = |lexer| {
+    eprintln!("Unrecognised character on line {}: `{}`", lexer.extras.line_num + 1, lexer.slice());
+})]
 enum Token {
     #[regex("[a-z]+")]
     Letters,

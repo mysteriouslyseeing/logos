@@ -251,7 +251,10 @@ pub fn generate(input: TokenStream) -> TokenStream {
                 type Source = #source;
 
                 fn make_error(lex: &mut #logos_path::Lexer<'s, Self>) -> Self::Error {
-                    #((#error_callback)(lex))*
+                    #(
+                        let callback: fn(&mut #logos_path::Lexer<'s, Self>) -> Self::Error = #error_callback;
+                        callback(lex)
+                    )*
 
                     #((#not_error_callback Default::default()))*
                 }
