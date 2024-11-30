@@ -238,7 +238,7 @@ impl Parser {
                     self.err("Unexpected token in attribute", tokens.span());
                 }
                 Nested::Unnamed(tokens) => match position {
-                    0 => skip.callback = Some(SkipCallback::hoist_from_callback(self.parse_callback(tokens)?)),
+                    0 => skip.callback = Some(SkipCallback::hoist_from_callback(self.parse_callback(tokens)?, self)),
                     _ => {
                         self.err(
                             "\

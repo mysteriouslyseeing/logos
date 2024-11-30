@@ -115,6 +115,35 @@ pub trait Logos<'source>: Sized {
 /// ```
 pub struct Skip;
 
+/// Type that can be returned from a callback, informing the `Lexer`, to error on the
+/// current token match using `E`.
+///
+/// # Example
+///
+/// ```rust
+/// use logos::{Logos, Error};
+///
+/// #[derive(Logos, Debug, PartialEq)]
+/// #[logos(skip r" ")]
+/// enum Token<'a> {
+///     #[regex("[a-zA-Z]+")]
+///     #[regex("abc", |_| Error(()), priority = 3)]
+///     Text(&'a str),
+/// }
+///
+/// let tokens: Vec<_> = Token::lexer("Hello abc world").collect();
+///
+/// assert_eq!(
+///     tokens,
+///     &[
+///         Ok(Token::Text("Hello")),
+///         Err(()),
+///         Ok(Token::Text("world")),
+///     ],
+/// );
+/// ```
+pub struct Error<E>(pub E);
+
 /// Type that can be returned from a callback, either producing a field
 /// for a token, or skipping it.
 ///

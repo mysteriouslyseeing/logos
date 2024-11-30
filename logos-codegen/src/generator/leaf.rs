@@ -57,10 +57,10 @@ impl<'a> Generator<'a> {
                 let body = &inline.body;
 
                 #[cfg(not(rust_1_82))]
-                let ret = quote!(impl CallbackResult<'s, #ty, #this>);
+                let ret = quote!(impl SkipCallbackResult<'s, #ty>);
 
                 #[cfg(rust_1_82)]
-                let ret = quote!(impl CallbackResult<'s, #ty, #this> + use<'s>);
+                let ret = quote!(impl SkipCallbackResult<'s, #ty> + use<'s>);
 
                 quote! {
                     #bump

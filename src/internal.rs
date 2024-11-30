@@ -1,5 +1,5 @@
 use crate::source::Chunk;
-use crate::{Filter, FilterResult, Lexer, Logos, Skip};
+use crate::{Error, Filter, FilterResult, Lexer, Logos, Skip};
 
 /// Trait used by the functions contained in the `Lexicon`.
 ///
@@ -231,6 +231,21 @@ impl<'s, T: Logos<'s>> CallbackResult<'s, (), T> for FilterResult<T, T::Error> {
         }
     }
 }
+impl<'s, T: Logos<'s>, E: Into<T::Error>> CallbackResult<'s, (), T> for Error<E> {
+    fn construct<Constructor>(self, _c: Constructor, lex: &mut Lexer<'s, T>)
+    where
+        Constructor: Fn(()) -> T {
+        lex.set(Err(self.0.into()))
+    }
+}
+
+impl<'s, T: Logos<'s>, E: Into<T::Error>> CallbackResult<'s, &'s str, T> for Error<E> {
+    fn construct<Constructor>(self, _c: Constructor, lex: &mut Lexer<'s, T>)
+    where
+        Constructor: Fn(&'s str) -> T {
+        lex.set(Err(self.0.into()))
+    }
+}
 
 pub trait SkipCallbackResult<'s, T: Logos<'s>> {
     fn evaluate(self, lex: &mut Lexer<'s, T>);
@@ -275,5 +290,11 @@ impl<'s, T: Logos<'s>, E: Into<T::Error>> SkipCallbackResult<'s, T> for Result<S
                 T::lex(lex)
             }
         }
+    }
+}
+
+impl<'s, T: Logos<'s>, E: Into<T::Error>> SkipCallbackResult<'s, T> for Error<E> {
+    fn evaluate(self, lex: &mut Lexer<'s, T>) {
+        lex.set(Err(self.0.into()))
     }
 }

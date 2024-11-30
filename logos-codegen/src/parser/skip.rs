@@ -26,11 +26,14 @@ impl SkipCallback {
             SkipCallback::None(span) => *span,
         }
     }
-    pub fn hoist_from_callback(callback: Callback) -> Self {
+    pub fn hoist_from_callback(callback: Callback, parser: &mut Parser) -> Self {
         match callback {
             Callback::Label(label) => Self::Label(label),
-            Callback::Inline(inline) => Self::Inline(inline),
-            Callback::Skip(skip) => skip
+            Callback::Inline(inline) => {
+                parser.err("Inline closures for #[logos(skip(...))] currently disabled, define a function instead", inline.span);
+                Self::Inline(inline)
+            }
+            Callback::Skip(skip) => skip,
         }
     }
 }
@@ -65,7 +68,7 @@ impl Skip {
             ("callback", NestedValue::Assign(tokens)) => {
                 let span = tokens.span();
                 let callback = match parser.parse_callback(tokens) {
-                    Some(cb) => SkipCallback::hoist_from_callback(cb),
+                    Some(cb) => SkipCallback::hoist_from_callback(cb, parser),
                     None => {
                         // parse_callback already echoed this error so we dont need to
                         return;
