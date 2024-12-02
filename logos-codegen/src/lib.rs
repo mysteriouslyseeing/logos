@@ -232,21 +232,25 @@ pub fn generate(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|| parse_quote!(::logos));
 
     let make_error_impl = match parser.error_callback.take() {
-        Some(leaf::Callback::Label(label)) => Some(quote! {
+        Some(leaf::Callback::Label(label)) => quote! {
             fn make_error(lex: &mut #logos_path::Lexer<'s, Self>) -> #error_type {
                 #label(lex)
             }
-        }),
+        },
         Some(leaf::Callback::Inline(inline)) => {
             let leaf::InlineCallback { arg, body, .. } = *inline;
 
-            Some(quote! {
+            quote! {
                 fn make_error(#arg: &mut #logos_path::Lexer<'s, Self>) -> #error_type {
                     #body
                 }
-            })
+            }
         }
-        _ => None,
+        _ => quote! {
+            fn make_error(_lex: &mut #logos_path::Lexer<'s, Self>) -> #error_type {
+                <#error_type as ::core::default::Default>::default()
+            }
+        },
     };
 
     let generics = parser.generics();

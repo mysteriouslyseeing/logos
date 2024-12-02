@@ -72,7 +72,10 @@ impl<'s, T: Logos<'s>> CallbackResult<'s, (), T> for bool {
     {
         match self {
             true => lex.set(Ok(c(()))),
-            false => lex.set(Err(T::Error::default())),
+            false => {
+                let error = T::make_error(lex);
+                lex.set(Err(error))
+            }
         }
     }
 }
@@ -85,7 +88,10 @@ impl<'s, P, T: Logos<'s>> CallbackResult<'s, P, T> for Option<P> {
     {
         match self {
             Some(product) => lex.set(Ok(c(product))),
-            None => lex.set(Err(T::Error::default())),
+            None => {
+                let error = T::make_error(lex);
+                lex.set(Err(error))
+            }
         }
     }
 }
