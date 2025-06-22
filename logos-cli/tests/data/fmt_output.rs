@@ -44,4 +44,9 @@ impl<'s> ::logos::Logos<'s> for Token {
         }
         goto4(lex)
     }
+    #[inline(always)]
+    fn make_error(lex: &mut ::logos::Lexer<'s, Self>) {
+        use logos::internal::LexerInternal;
+        lex.set(Err(<() as ::core::default::Default>::default()))
+    }
 }

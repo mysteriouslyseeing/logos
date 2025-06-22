@@ -239,29 +239,36 @@ pub fn generate(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|| parse_quote!(::logos));
 
     let make_error_impl = match error_callback {
-        Some(leaf::Callback::Label(label)) => Some(quote! {
-            #[inline]
+        Some(leaf::Callback::Label(label)) => quote! {
+            #[inline(always)]
             fn make_error(mut lex: &mut #logos_path::Lexer<'s, Self>) {
                 use #logos_path::{Lexer, internal::LexerInternal};
 
                 let error = #label(&mut lex);
                 lex.set(Err(error));
             }
-        }),
+        },
         Some(leaf::Callback::Inline(inline)) => {
             let leaf::InlineCallback { arg, body, .. } = *inline;
 
-            Some(quote! {
-                #[inline]
+            quote! {
+                #[inline(always)]
                 fn make_error(#arg: &mut #logos_path::Lexer<'s, Self>) {
                     use #logos_path::internal::LexerInternal;
 
                     let error = { #body };
                     #arg.set(Err(error))
                 }
-            })
+            }
         }
-        _ => None,
+        _ => quote! {
+            #[inline(always)]
+            fn make_error(lex: &mut #logos_path::Lexer<'s, Self>) {
+                use #logos_path::internal::LexerInternal;
+
+                lex.set(Err(<#error_type as ::core::default::Default>::default()))
+            }
+        },
     };
 
     let generics = parser.generics();
